@@ -1,0 +1,137 @@
+import pandas as pd
+import os
+import re
+from openpyxl import load_workbook
+from openpyxl.styles import PatternFill, Border, Side, Font
+
+columns_to_export = [
+    "No", "Palllet#", "Tfc Code", "Preferred Bin",
+    "Qt", "Target Bin1", "Target Bin2", "Memo"
+]
+
+
+def save_file(input_df):
+
+    thin_border = Border(
+        left=Side(style="thin", color="000000"),
+        right=Side(style="thin", color="000000"),
+        top=Side(style="thin", color="000000"),
+        bottom=Side(style="thin", color="000000")
+    )
+
+    font_normal = Font(name="Arial", size=12)  # 일반 셀
+    font_bold = Font(name="Arial", size=12, bold=True)  # 헤더(굵게)
+
+    for po_name, df_group in input_df.groupby("PO name"):
+        if pd.isna(po_name) or str(po_name).strip() == "":
+            continue
+
+        print(f"Processing: {po_name}")
+        print(df_group)
+        # df_group["ref_flag"] = df_group["Palllet#"].str.contains("ref", case=False, na=False)
+        # df_group = df_group.sort_values(
+        #     by=["Tfc Code", "ref_flag", "Palllet#"],
+        #     ascending=[True, True, True]
+        # ).reset_index(drop=True)
+        # #
+        # df_group = df_group.sort_values(by="Palllet#", ascending=True).reset_index(drop=True)
+        print(f"df_group before sort:\n{df_group}")
+
+        first_value = df_group["PO name"].iloc[0]  # 첫 번째 행의 값
+        print(f"PO name: {po_name} → 첫 번째 PO file: {first_value}")
+
+        df_group = df_group.sort_values(
+            by=[ "Palllet#", "Preferred Bin"],
+            ascending=[True, True]
+        ).reset_index(drop=True)
+        merged_rows = []
+
+        for (pallet, tfc), group in df_group.groupby(["Palllet#", "Tfc Code"]):
+            record = group.iloc[0].copy()
+
+            bins1 = group["Target Bin1"].dropna().unique().tolist()
+            bins2 = group["Target Bin2"].dropna().unique().tolist()
+
+            record["Target Bin1"] = "".join(bins1)
+            record["Target Bin2"] = "".join(bins2)
+
+            merged_rows.append(record)
+
+        df_merged = pd.DataFrame(merged_rows)
+        df_merged = df_merged.sort_values(
+            by=["Palllet#", "Preferred Bin"],
+            ascending=[True, True]
+        ).reset_index(drop=True)
+
+        if "No" not in df_merged.columns:
+            df_merged.insert(0, "No", range(1, len(df_merged) + 1))
+        else:
+            df_merged["No"] = range(1, len(df_merged) + 1)
+        print(f"po_name sheet name1: {po_name}")
+        safe_name = re.sub(r'[\\/:\*\?"<>\|\-]', "_", po_name)
+        safe_name = os.path.splitext(safe_name)[0]
+        print(f"safe_name sheet name1: {safe_name}")
+
+        match = re.search(r"PO\d{5}([^_]+)", safe_name)
+        if match:
+            extracted = match.group(1)  # ✅ MM01AAD25
+        else:
+            extracted = po_name
+        print(f"Extracted sheet name1: {extracted}")
+        extracted = re.sub(r'[\\/\:\*\?\[\]]', "_", extracted)
+        extracted = extracted.strip()
+        if len(extracted) > 31:
+            extracted = extracted[:31]
+        print(f"Extracted sheet name2: {extracted}")
+
+        output_path = os.path.join(f"{safe_name}_kakuno")
+
+        if not output_path.lower().endswith(".xlsx"):
+            output_path += ".xlsx"
+
+        df_merged[columns_to_export].to_excel(output_path, index=False)
+
+        wb = load_workbook(output_path)
+        ws = wb.active
+        ws.title = extracted
+
+        # Header fill
+        header_fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")
+        for cell in ws[1]:
+            cell.fill = header_fill
+            cell.font = font_bold
+            cell.border = thin_border
+
+        # Cell line
+        for row in ws.iter_rows(min_row=2):
+            for cell in row:
+                cell.font = font_normal
+                cell.border = thin_border
+
+        # Auto column width
+        for column_cells in ws.columns:
+            max_length = 0
+            column = column_cells[0].column_letter
+            column_header = column_cells[0].value
+
+            for cell in column_cells:
+                try:
+                    if cell.value:
+                        length = len(str(cell.value))
+                        if length > max_length:
+                            max_length = length
+                except:
+                    pass
+            adjusted_width = max_length + 2
+
+            if column_header in ["Palllet#", "memo", "preferred bin",
+                                 "Target Bin1", "Target Bin2"  ]:
+                adjusted_width = 20  # 🔹 Memo 열은 20칸 더 넓게
+
+            ws.column_dimensions[column].width = adjusted_width
+
+
+        wb.save(output_path)
+        wb.close()
+
+        print(f"✅ Saved: {output_path}")
