@@ -1,11 +1,14 @@
 # main.py / class_empty_bin.py
 EMPTYBIN_DIR = r"\\Tfc-akl-share\tfc共有\物流部\物流部\EmptyBin"
 
+# process_file.py / search_zone
+REF_LIST = []
 
 # class_empty_bin.py
 BASE_INPUT_FILE = "bins.csv"
 BASE_INPUT_FILE_FLAG = 0    # 0 : bins.csv
                             # 1 : others
+INPUT_FILE_NAME = ""
 
 
 # class_stocklist.py

@@ -10,6 +10,7 @@ from class_stocklist import StockList
 import config
 
 
+
 selected_po_paths = []   # PO files
 selected_bin_path = ""   # bin file
 
@@ -19,7 +20,6 @@ def select_empty_bin():
     global selected_bin_path
 
     fixed_path = os.path.join(config.EMPTYBIN_DIR, "EmptyBin.csv")
-
 
     if os.path.exists(fixed_path):
         selected_bin_path = fixed_path
@@ -70,7 +70,7 @@ def run_process():
 
     # if not selected_po_paths or not selected_bin_path:
     if not selected_po_paths:
-        messagebox.showwarning("Missing File", "⚠️ You must select both files!")
+        messagebox.showwarning("Missing File", "⚠️ You must select files!")
         return
 
     # po_files_names = [os.path.basename(f) for f in selected_po_paths]
@@ -143,12 +143,17 @@ def close_app():
         root.destroy()
 
 
+
+def check_recieve():
+    df_empty_bins = EmptyBin.empty_bins(selected_bin_path, 0)
+
+
 # -------------------------------
 # 🎨 Main Window
 # -------------------------------
 root = tk.Tk()
 root.title("File Selector")
-root.geometry("580x180")
+root.geometry("640x260")
 root.configure(bg="#165A7A")
 
 label_font = font.Font(family="Arial", size=12, weight="bold")
@@ -178,17 +183,17 @@ tk.Label(
     bg="#165A7A",
     fg="white",
     font=label_font
-).grid(row=1, column=0, padx=10, pady=20, sticky="ne")
+).grid(row=2, column=0, padx=10, pady=20, sticky="ne")
 
 text_purchase_order = tk.Text(root, width=55, height=5, font=big_font, wrap="none")
-text_purchase_order.grid(row=1, column=1, pady=10)
+text_purchase_order.grid(row=2, column=1, pady=10)
 
 # Optional: Scrollbar
 scroll = tk.Scrollbar(root, command=text_purchase_order.yview)
 text_purchase_order.config(yscrollcommand=scroll.set)
-scroll.grid(row=1, column=2, sticky="ns", pady=10)
+scroll.grid(row=2, column=2, sticky="ns", pady=10)
 
-tk.Button(root, text="🔍 Find", command=select_po_files).grid(row=1, column=3, padx=5, pady=10, sticky="n")
+tk.Button(root, text="🔍 Find", command=select_po_files).grid(row=2, column=3, padx=5, pady=10, sticky="n")
 
 
 
@@ -197,14 +202,29 @@ tk.Button(root, text="🔍 Find", command=select_po_files).grid(row=1, column=3,
 # ▶ Run & ❌ Exit Buttons
 # -------------------------------
 button_frame = tk.Frame(root, bg="#165A7A")
-button_frame.grid(row=2, column=1, pady=10)
+button_frame.grid(row=1, column=1, pady=10)
+
+tk.Button(
+    button_frame,
+    text="Check Receive",
+    bg="#66CCFF",
+    fg="white",
+    width=38,
+    height=2,
+    font=("Arial", 12, "bold"),
+    command=check_recieve
+).pack(side="top", padx=30)
+
+
+button_frame = tk.Frame(root, bg="#165A7A")
+button_frame.grid(row=3, column=1, pady=10)
 
 tk.Button(
     button_frame,
     text="▶ Run",
     bg="#0A9D58",
     fg="white",
-    width=12,
+    width=16,
     height=2,
     font=("Arial", 12, "bold"),
     command=run_process
@@ -215,11 +235,13 @@ tk.Button(
     text="❌ Exit",
     bg="#C82333",
     fg="white",
-    width=12,
+    width=15,
     height=2,
     font=("Arial", 12, "bold"),
     command=close_app
 ).pack(side="right", padx=30)
+
+
 
 
 root.mainloop()

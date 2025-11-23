@@ -86,19 +86,16 @@ class POFile:
         rtn_df_dict: dict[str, pd.DataFrame] = {}
 
         for f in po_files_names:
-            po = cls(f)  # POFile 객체 생성
+            po = cls(f)
 
-            # 1️⃣ 파일 로드
             if not po.load():
                 print(f"⚠️ {po.name} → Failed to load workbook")
                 continue
 
-            # 2️⃣ 시트 로드 ("格納")
             if not po.read_sheet("格納"):
                 print(f"⚠️ {po.name} → Failed to read sheet '格納'")
                 continue
 
-            # 3️⃣ 데이터 추출
             df = po.extract_data()
             rtn_df_dict[po.name] = df
 

@@ -104,13 +104,67 @@ def get_devan_height(input_record, criteria_id, df_empty_bins, search_times) -> 
         pallet_val = str(input_record.get("Palllet#"))
         has_ref = "ref" in pallet_val.lower()
 
+        if has_ref:
+            config.REF_LIST.append(input_record["Tfc Code"])
+            # tfccode = input_record["Tfc Code"]
+            # config.REF_FLAG = { tfccode:1 }
+
         criteria_condition = True if has_ref else (df_empty_bins["criteria_id"] == 0)
 
-        filtered_df = df_empty_bins[
-            df_empty_bins["bin_number"].str.startswith(criteria_id.location, na=False) &
-            df_empty_bins["bin_number"].str.contains(f"-{criteria_id.zone}-", na=False) &
-            (df_empty_bins["empty_flag"] == 1) & criteria_condition
-        ].copy()
+        preferred_bin = input_record['Preferred Bin']
+        matched_row = df_empty_bins[df_empty_bins['bin_number'] == preferred_bin]
+        bin_type = matched_row['Type'].values[0]
+        print(f"▶ 현재 Type: {bin_type}")
+
+
+        # # Common filter
+        # common_filter = (
+        #         df_empty_bins["bin_number"].str.startswith(criteria_id.location, na=False) &
+        #         df_empty_bins["bin_number"].str.contains(f"-{criteria_id.zone}-", na=False) &
+        #         (df_empty_bins["empty_flag"] == 1) &
+        #         criteria_condition
+        # )
+        #
+        # if bin_type in ["A", "C"]:
+        #     type_filter = df_empty_bins["Type"] == "A"
+        #
+        # else:
+        #     has_B = (
+        #             (df_empty_bins["empty_flag"] == 1) &
+        #             (df_empty_bins["criteria_id"] == 0) &
+        #             df_empty_bins["Type"].eq("B")
+        #     ).any()
+        #
+        #     type_filter = df_empty_bins["Type"].eq("B") if has_B else df_empty_bins["Type"].eq("A")
+        #
+        # filtered_df = df_empty_bins[common_filter & type_filter].copy()
+
+
+
+        if bin_type in ["A", "C"]:
+            filtered_df = df_empty_bins[
+                df_empty_bins["bin_number"].str.startswith(criteria_id.location, na=False) &
+                df_empty_bins["bin_number"].str.contains(f"-{criteria_id.zone}-", na=False) &
+                (df_empty_bins["empty_flag"] == 1) & criteria_condition &
+                (df_empty_bins["Type"] == "A")
+            ].copy()
+        elif bin_type == "B":
+            if ((df_empty_bins["empty_flag"] == 1) &
+                (df_empty_bins["criteria_id"] == 0) &
+                df_empty_bins["Type"].isin(["B"])).sum() >= 1:
+                filtered_df = df_empty_bins[
+                    df_empty_bins["bin_number"].str.startswith(criteria_id.location, na=False) &
+                    df_empty_bins["bin_number"].str.contains(f"-{criteria_id.zone}-", na=False) &
+                    (df_empty_bins["empty_flag"] == 1) & criteria_condition &
+                    df_empty_bins["Type"].isin(["B"])
+                ].copy()
+            else:
+                filtered_df = df_empty_bins[
+                    df_empty_bins["bin_number"].str.startswith(criteria_id.location, na=False) &
+                    df_empty_bins["bin_number"].str.contains(f"-{criteria_id.zone}-", na=False) &
+                    (df_empty_bins["empty_flag"] == 1) & criteria_condition &
+                    df_empty_bins["Type"].isin(["A"])
+                    ].copy()
 
         filtered_df["devan_height"] = (
             filtered_df["bin_number"]
