@@ -99,10 +99,10 @@ def run_process():
 
     df_empty_bins = EmptyBin.empty_bins(bin_file_name, unique_bins)
 
-    result_string = check_run(df_empty_bins, po_files_names)
-    if result_string:
-        messagebox.showinfo("PO Match", result_string)
-        exit(0)
+    # result_string = check_run(df_empty_bins, po_files_names)
+    # if result_string:
+    #     messagebox.showinfo("PO Match", result_string)
+    #     exit(0)
 
 
     # print(unique_po_names)
@@ -120,8 +120,8 @@ def run_process():
     rtn_process = process_bins(df_dict_po_files, df_empty_bins, df_stock_list_heavy)
 
     from datetime import datetime
-    # timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    timestamp = datetime.now().strftime("%Y%m%d")
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    # timestamp = datetime.now().strftime("%Y%m%d")
     output_path = config.EMPTYBIN_DIR
     output_name = f"empty_bins_result{timestamp}.csv"
     output_path_name = os.path.join(output_path, output_name)

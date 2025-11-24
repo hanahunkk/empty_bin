@@ -37,16 +37,20 @@ def process_bins(df_dict_po_files, df_empty_bins, df_stock_list_heavy) -> bool:
                 print(group[["Palllet#", "Preferred Bin", "格納先"]])
                 print(f"=================================================================")
                 for idx, row in group.iterrows():
-                    pallet_val = str(row.get("Palllet#"))
-                    has_ref = "ref" in pallet_val.lower()
+                    # pallet_val = str(row.get("Palllet#"))
+                    # has_ref = "ref" in pallet_val.lower()
                     # row["weight"] = weight_val
-
                     pallet_val = str(row.get("Palllet#", "")).lower()
-                    has_ref = "ref" in pallet_val
+                    has_ref = "ref" in pallet_val.lower()
                     if has_ref:
-                        if row.get('Tfc Code') in config.REF_LIST:
-                            config.REF_LIST.remove(row.get('Tfc Code'))
-                            continue
+                        continue
+
+                    # pallet_val = str(row.get("Palllet#", "")).lower()
+                    #
+                    # if has_ref:
+                    #     if row.get('Tfc Code') in config.REF_LIST:
+                    #         config.REF_LIST.remove(row.get('Tfc Code'))
+                    #         continue
 
                     rtn_check = check_bin(row.get('Preferred Bin'))
                     print(f"{idx:03d} | Palllet#: {row.get('Palllet#')} | "
