@@ -100,218 +100,100 @@ def get_devan_height(input_record, criteria_id, df_empty_bins, search_times) -> 
     else:
         max_height = config.MAX_HEIGHT
 
-
     pallet_val = str(input_record.get("Palllet#"))
     preferred_bin = input_record['Preferred Bin']
     matched_row = df_empty_bins[df_empty_bins['bin_number'] == preferred_bin]
     bin_type = matched_row['Type'].values[0]
 
-    cond_pick = df_empty_bins["Pick/Reserve"].astype(str).str.strip() != "P"
+    cond_pick = df_empty_bins["Pick/Reserve"].astype(str).str.strip() != "P"    # Exclude Pick bins
     cond_empty = df_empty_bins["empty_flag"] == 1
     cond_location = df_empty_bins["bin_number"].str.startswith(criteria_id.location, na=False)
     cond_zone = df_empty_bins["bin_number"].str.contains(f"-{criteria_id.zone}-", na=False)
 
-    if search_times == 1:
-        # pallet_val = str(input_record.get("Palllet#"))
-        # preferred_bin = input_record['Preferred Bin']
-        # matched_row = df_empty_bins[df_empty_bins['bin_number'] == preferred_bin]
-        # bin_type = matched_row['Type'].values[0]
-        #
-        # cond_pick = df_empty_bins["Pick/Reserve"].astype(str).str.strip() != "P"
-        # cond_empty = df_empty_bins["empty_flag"] == 1
-        # cond_location = df_empty_bins["bin_number"].str.startswith(criteria_id.location, na=False)
-        # cond_zone = df_empty_bins["bin_number"].str.contains(f"-{criteria_id.zone}-", na=False)
+    if bin_type in ["A", "C"]:
+        # if (df_empty_bins["ZoneType"].astype(str).str.strip() == "AC1").all():
+        #     max_height = config.MAX_HEIGHT_HEAVY_AC1
+        # elif (df_empty_bins["ZoneType"].astype(str).str.strip() == "AC2").all():
+        #     max_height = config.MAX_HEIGHT_HEAVY_AC2
+        # else:
+        #     pass
+        filtered_df = df_empty_bins[
+            cond_location &
+            cond_zone &
+            cond_empty &
+            cond_pick &
+            (df_empty_bins["Type"] == "A")
+            ].copy()
 
-        if bin_type in ["A", "C"]:
+    elif bin_type == "B":
+        max_height = config.MAX_HEIGHT
+        cond_b_candidates = (
+                (df_empty_bins["empty_flag"] == 1) &
+                (df_empty_bins["criteria_id"] == 0) &
+                df_empty_bins["Type"].isin(["B"]) &
+                cond_pick
+        )
 
+        if cond_b_candidates.sum() >= 1:
             filtered_df = df_empty_bins[
                 cond_location &
                 cond_zone &
                 cond_empty &
                 cond_pick &
-                (df_empty_bins["Type"] == "A")
+                df_empty_bins["Type"].isin(["B"])
+                ].copy()
+        else:
+            filtered_df = df_empty_bins[
+                cond_location &
+                cond_zone &
+                cond_empty &
+                cond_pick &
+                df_empty_bins["Type"].isin(["A"])
                 ].copy()
 
-        elif bin_type == "B":
-            max_height = config.MAX_HEIGHT
-            cond_b_candidates = (
-                    (df_empty_bins["empty_flag"] == 1) &
-                    (df_empty_bins["criteria_id"] == 0) &
-                    df_empty_bins["Type"].isin(["B"]) &
-                    cond_pick
-            )
+    filtered_df["devan_height"] = (
+        filtered_df["bin_number"]
+        .str.extract(r"-(\d+)$")
+        .astype(int)
+    )
 
-            if cond_b_candidates.sum() >= 1:
-                filtered_df = df_empty_bins[
-                    cond_location &
-                    cond_zone &
-                    cond_empty &
-                    cond_pick &
-                    df_empty_bins["Type"].isin(["B"])
-                    ].copy()
-            else:
-                filtered_df = df_empty_bins[
-                    cond_location &
-                    cond_zone &
-                    cond_empty &
-                    cond_pick &
-                    df_empty_bins["Type"].isin(["A"])
-                    ].copy()
+    df_equal = filtered_df[filtered_df["devan_height"] == int(criteria_id.devan_height)]
+    df_smaller = filtered_df[filtered_df["devan_height"] < int(criteria_id.devan_height)].sort_values(
+        by="devan_height", ascending=False
+    )
+    df_larger = filtered_df[filtered_df["devan_height"] > int(criteria_id.devan_height)].sort_values(
+        by="devan_height", ascending=True
+    )
 
-        filtered_df["devan_height"] = (
-            filtered_df["bin_number"]
-            .str.extract(r"-(\d+)$")
-            .astype(int)
-        )
+    df_devan_height = pd.concat([df_equal, df_smaller, df_larger], ignore_index=True)
+    df_devan_height["devan_height"] = df_devan_height["bin_number"].str.extract(r"-(\d+)$").astype(int)
+    df_limited = df_devan_height[df_devan_height["devan_height"] <= max_height].reset_index(drop=True)
 
-        df_equal = filtered_df[filtered_df["devan_height"] == int(criteria_id.devan_height)]
-        df_smaller = filtered_df[filtered_df["devan_height"] < int(criteria_id.devan_height)].sort_values(
-            by="devan_height", ascending=False
-        )
-        df_larger = filtered_df[filtered_df["devan_height"] > int(criteria_id.devan_height)].sort_values(
-            by="devan_height", ascending=True
-        )
+    position = 0
 
-        df_devan_height = pd.concat([df_equal, df_smaller, df_larger], ignore_index=True)
+    if len(df_limited) >= 1:
+        target_bin = df_limited.iloc[position]["bin_number"]
 
-        df_devan_height["devan_height"] = df_devan_height["bin_number"].str.extract(r"-(\d+)$").astype(int)
-        df_limited = df_devan_height[df_devan_height["devan_height"] <= max_height].reset_index(drop=True)
-        # print(f"df_limited1:{df_limited}")
 
-        # print(f"input record \n"
-        #       f"{input_record}")
-        #
-        # print(f"df_devan_heigh VS df_limited \n"
-        #       f"{df_devan_height} \n"
-        #       f"{df_limited}")
-        # if len(df_limited) >= 1:
-        #     print(f"df_limited{df_limited}")
+        df_empty_bins.loc[df_empty_bins["bin_number"] == target_bin, "Tfc Code"] = str(input_record.get('Tfc Code'))
+        df_empty_bins.loc[df_empty_bins["bin_number"] == target_bin, "Palllet#"] = str(input_record.get('Palllet#'))
+        df_empty_bins.loc[df_empty_bins["bin_number"] == target_bin, "Preferred Bin"] = str(
+            input_record.get('Preferred Bin'))
+        df_empty_bins.loc[df_empty_bins["bin_number"] == target_bin, "Qt"] = input_record.get('Qt')
+        df_empty_bins.loc[df_empty_bins["bin_number"] == target_bin, "PO name"] = input_record.get('PO name')
 
-        position = 0
 
-        # if len(df_devan_height) >= 1:
-        #     target_bin = df_devan_height.iloc[position]["bin_number"]
-
-        if len(df_limited) >= 1:
-            target_bin = df_limited.iloc[position]["bin_number"]
-
+        if search_times == 1:
             df_empty_bins.loc[df_empty_bins["bin_number"] == target_bin, "empty_flag"] = 0
-            df_empty_bins.loc[df_empty_bins["bin_number"] == target_bin, "Tfc Code"] = str(input_record.get('Tfc Code'))
-            df_empty_bins.loc[df_empty_bins["bin_number"] == target_bin, "Palllet#"] = str(input_record.get('Palllet#'))
-            df_empty_bins.loc[df_empty_bins["bin_number"] == target_bin, "Preferred Bin"] = str(
-                input_record.get('Preferred Bin'))
-            df_empty_bins.loc[df_empty_bins["bin_number"] == target_bin, "Qt"] = input_record.get('Qt')
-            df_empty_bins.loc[df_empty_bins["bin_number"] == target_bin, "PO name"] = input_record.get('PO name')
             df_empty_bins.loc[df_empty_bins["bin_number"] == target_bin, "Target Bin1"] = \
                 df_limited["bin_number"].tolist()[0]
-            # df_devan_height["bin_number"].tolist()[0]
-
-            print(f"df_devan_height:{df_devan_height["bin_number"].tolist()[0]}")
-
-            # updated_row = df_empty_bins.loc[df_empty_bins["bin_number"] == target_bin]
-            # print(updated_row.to_string(index=False))
-    else:
-        # filtered_df = df_empty_bins[
-        #     df_empty_bins["bin_number"].str.startswith(criteria_id.location, na=False) &
-        #     df_empty_bins["bin_number"].str.contains(f"-{criteria_id.zone}-", na=False) &
-        #     (df_empty_bins["empty_flag"] == 1)
-        #     ].copy()
-        #
-        # filtered_df["devan_height"] = (
-        #     filtered_df["bin_number"]
-        #     .str.extract(r"-(\d+)$")
-        #     .astype(int)
-        # )
-
-        # pallet_val = str(input_record.get("Palllet#"))
-        # preferred_bin = input_record['Preferred Bin']
-        # matched_row = df_empty_bins[df_empty_bins['bin_number'] == preferred_bin]
-        # bin_type = matched_row['Type'].values[0]
-        #
-        # cond_pick = df_empty_bins["Pick/Reserve"].astype(str).str.strip() != "P"
-        # cond_empty = df_empty_bins["empty_flag"] == 1
-        # cond_location = df_empty_bins["bin_number"].str.startswith(criteria_id.location, na=False)
-        # cond_zone = df_empty_bins["bin_number"].str.contains(f"-{criteria_id.zone}-", na=False)
-
-        if bin_type in ["A", "C"]:
-
-            filtered_df = df_empty_bins[
-                cond_location &
-                cond_zone &
-                cond_empty &
-                cond_pick &
-                (df_empty_bins["Type"] == "A")
-                ].copy()
-
-        elif bin_type == "B":
-            max_height = config.MAX_HEIGHT
-            cond_b_candidates = (
-                    (df_empty_bins["empty_flag"] == 1) &
-                    (df_empty_bins["criteria_id"] == 0) &
-                    df_empty_bins["Type"].isin(["B"]) &
-                    cond_pick
-            )
-
-            if cond_b_candidates.sum() >= 1:
-                filtered_df = df_empty_bins[
-                    cond_location &
-                    cond_zone &
-                    cond_empty &
-                    cond_pick &
-                    df_empty_bins["Type"].isin(["B"])
-                    ].copy()
-            else:
-                filtered_df = df_empty_bins[
-                    cond_location &
-                    cond_zone &
-                    cond_empty &
-                    cond_pick &
-                    df_empty_bins["Type"].isin(["A"])
-                    ].copy()
-
-        filtered_df["devan_height"] = (
-            filtered_df["bin_number"]
-            .str.extract(r"-(\d+)$")
-            .astype(int)
-        )
-
-
-
-        df_equal = filtered_df[filtered_df["devan_height"] == int(criteria_id.devan_height)]
-        df_smaller = filtered_df[filtered_df["devan_height"] < int(criteria_id.devan_height)].sort_values(
-            by="devan_height", ascending=False
-        )
-        df_larger = filtered_df[filtered_df["devan_height"] > int(criteria_id.devan_height)].sort_values(
-            by="devan_height", ascending=True
-        )
-
-        df_devan_height = pd.concat([df_equal, df_smaller, df_larger], ignore_index=True)
-        df_devan_height["devan_height"] = df_devan_height["bin_number"].str.extract(r"-(\d+)$").astype(int)
-        df_limited = df_devan_height[df_devan_height["devan_height"] <= max_height].reset_index(drop=True)
-        # print(f"df_devan_heigh VS df_limited \n"
-        #       f"{df_devan_height} \n"
-        #       f"{df_limited}")
-        # if len(df_limited) >= 1:
-        #     print(f"df_limited{df_limited}")
-
-        position = 0
-
-        if len(df_limited) >= 1:
-            target_bin = df_limited.iloc[position]["bin_number"]
-
+        else:
             df_empty_bins.loc[df_empty_bins["bin_number"] == target_bin, "empty_flag"] = 2
-            df_empty_bins.loc[df_empty_bins["bin_number"] == target_bin, "Tfc Code"] = str(input_record.get('Tfc Code'))
-            df_empty_bins.loc[df_empty_bins["bin_number"] == target_bin, "Palllet#"] = str(input_record.get('Palllet#'))
-            df_empty_bins.loc[df_empty_bins["bin_number"] == target_bin, "Preferred Bin"] = str(
-                input_record.get('Preferred Bin'))
-            df_empty_bins.loc[df_empty_bins["bin_number"] == target_bin, "Qt"] = input_record.get('Qt')
-            df_empty_bins.loc[df_empty_bins["bin_number"] == target_bin, "PO name"] = input_record.get('PO name')
             df_empty_bins.loc[df_empty_bins["bin_number"] == target_bin, "Target Bin2"] = \
                 df_limited["bin_number"].tolist()[0]
 
-            print(f"df_devan_height:{df_devan_height["bin_number"].tolist()[0]}")
-
-            updated_row = df_empty_bins.loc[df_empty_bins["bin_number"] == target_bin]
+        print(f"df_devan_height:{df_devan_height["bin_number"].tolist()[0]}")
+            # updated_row = df_empty_bins.loc[df_empty_bins["bin_number"] == target_bin]
 
     # return df_devan_height
     return df_limited

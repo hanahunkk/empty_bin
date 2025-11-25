@@ -99,10 +99,17 @@ def run_process():
 
     df_empty_bins = EmptyBin.empty_bins(bin_file_name, unique_bins)
 
-    # result_string = check_run(df_empty_bins, po_files_names)
-    # if result_string:
-    #     messagebox.showinfo("PO Match", result_string)
-    #     exit(0)
+    result_string = check_run(df_empty_bins, po_files_names)
+    if result_string:
+        messagebox.showinfo("PO Match", result_string)
+
+        # selected_po_paths.clear()
+        # # global selected_bin_path
+        # selected_bin_path = ""
+
+        # entry_bin.delete(0, tk.END)
+
+        return
 
 
     # print(unique_po_names)
@@ -145,7 +152,9 @@ def close_app():
 
 
 def check_recieve():
-    df_empty_bins = EmptyBin.empty_bins(selected_bin_path, 0)
+    pass
+    # df_empty_bins = EmptyBin.empty_bins(selected_bin_path, 0)
+    # show_po_checkboxes(df_empty_bins)
 
 
 # -------------------------------
