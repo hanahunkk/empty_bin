@@ -187,7 +187,7 @@ def search_bin(input_record, df_empty_bins, search_times) -> None:
         if total_count > 0:
             break
         else:
-            print(f"⚠️ Weight Not enough {total_count}")
+            print(f"⚠️ Weight Not enough loc({loc}) {total_count}")
             continue
 
 

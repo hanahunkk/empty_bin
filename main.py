@@ -99,22 +99,11 @@ def run_process():
 
     df_empty_bins = EmptyBin.empty_bins(bin_file_name, unique_bins)
 
-    result_string = check_run(df_empty_bins, po_files_names)
-    if result_string:
-        messagebox.showinfo("PO Match", result_string)
-
-        # selected_po_paths.clear()
-        # # global selected_bin_path
-        # selected_bin_path = ""
-
-        # entry_bin.delete(0, tk.END)
-
-        return
-
-
-    # print(unique_po_names)
-    # df_empty_bins.to_csv("result_mid5.csv", index=False)
-
+    # Check duplicate of PO files
+    # result_string = check_run(df_empty_bins, po_files_names)
+    # if result_string:
+    #     messagebox.showinfo("PO Match", result_string)
+    #     return
 
     # Load Stock List
     df_stock_list = StockList.item_standard()

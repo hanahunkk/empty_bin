@@ -80,21 +80,7 @@ def get_devan_height(input_record, criteria_id, df_empty_bins, search_times) -> 
                     2 : tentative
     '''
 
-    # stock_list = StockList()
-    # df_stock_list = stock_list.df
-    # df_items = item_standard(df_stock_list)
-    #
-    # tfc_code = input_record.get("Tfc Code")
-    # match = df_items.loc[df_items["ITEM CODE"] == tfc_code, "heavy_flag"]
-    #
-    # if not match.empty:
-    #     heavy_flag = match.iloc[0]
-    # else:
-    #     heavy_flag = None
-    #
-    # if heavy_flag == 1:
-    #     max_height = MAX_HEIGHT_HEAVY
-    # else:
+
     if input_record["heavy_flag"] == 1:
         max_height = config.MAX_HEIGHT_HEAVY
     else:
@@ -110,18 +96,15 @@ def get_devan_height(input_record, criteria_id, df_empty_bins, search_times) -> 
     cond_location = df_empty_bins["bin_number"].str.startswith(criteria_id.location, na=False)
     cond_zone = df_empty_bins["bin_number"].str.contains(f"-{criteria_id.zone}-", na=False)
 
+    print(f"criteria_id:{criteria_id.bin_number}")
+    print(f"bin_type:{bin_type}")
+
     if bin_type in ["A", "C"]:
-        # if (df_empty_bins["ZoneType"].astype(str).str.strip() == "AC1").all():
-        #     max_height = config.MAX_HEIGHT_HEAVY_AC1
-        # elif (df_empty_bins["ZoneType"].astype(str).str.strip() == "AC2").all():
-        #     max_height = config.MAX_HEIGHT_HEAVY_AC2
-        # else:
-        #     pass
         filtered_df = df_empty_bins[
             cond_location &
             cond_zone &
             cond_empty &
-            cond_pick &
+            # cond_pick &
             (df_empty_bins["Type"] == "A")
             ].copy()
 
@@ -130,8 +113,8 @@ def get_devan_height(input_record, criteria_id, df_empty_bins, search_times) -> 
         cond_b_candidates = (
                 (df_empty_bins["empty_flag"] == 1) &
                 (df_empty_bins["criteria_id"] == 0) &
-                df_empty_bins["Type"].isin(["B"]) &
-                cond_pick
+                df_empty_bins["Type"].isin(["B"])
+                # cond_pick
         )
 
         if cond_b_candidates.sum() >= 1:
@@ -139,7 +122,7 @@ def get_devan_height(input_record, criteria_id, df_empty_bins, search_times) -> 
                 cond_location &
                 cond_zone &
                 cond_empty &
-                cond_pick &
+                # cond_pick &
                 df_empty_bins["Type"].isin(["B"])
                 ].copy()
         else:
@@ -147,7 +130,7 @@ def get_devan_height(input_record, criteria_id, df_empty_bins, search_times) -> 
                 cond_location &
                 cond_zone &
                 cond_empty &
-                cond_pick &
+                # cond_pick &
                 df_empty_bins["Type"].isin(["A"])
                 ].copy()
 
@@ -156,6 +139,15 @@ def get_devan_height(input_record, criteria_id, df_empty_bins, search_times) -> 
         .str.extract(r"-(\d+)$")
         .astype(int)
     )
+
+    print(f"filtered_df(before check):\n{filtered_df}")
+    exit(0)
+
+    if len(filtered_df) == 0:
+        print("⚠ No bins found after filtering.")
+        return filtered_df
+
+    print(f"filtered_df:\n{filtered_df}")
 
     df_equal = filtered_df[filtered_df["devan_height"] == int(criteria_id.devan_height)]
     df_smaller = filtered_df[filtered_df["devan_height"] < int(criteria_id.devan_height)].sort_values(
@@ -167,11 +159,23 @@ def get_devan_height(input_record, criteria_id, df_empty_bins, search_times) -> 
 
     df_devan_height = pd.concat([df_equal, df_smaller, df_larger], ignore_index=True)
     df_devan_height["devan_height"] = df_devan_height["bin_number"].str.extract(r"-(\d+)$").astype(int)
+
+    # Reset the max_height based on ZoneType
+    if bin_type in ["A", "C"] and len(df_devan_height) >= 1:
+        zone_type = df_devan_height.iloc[0]['ZoneType']
+        if zone_type == "AC1":
+            max_height = config.MAX_HEIGHT_HEAVY_AC1
+        elif zone_type == "AC2":
+            max_height = config.MAX_HEIGHT_HEAVY_AC2
+        else:
+            pass
     df_limited = df_devan_height[df_devan_height["devan_height"] <= max_height].reset_index(drop=True)
 
     position = 0
 
     if len(df_limited) >= 1:
+        print(f"max_height:{max_height}")
+        print(f"df_limited:\n{df_limited}")
         target_bin = df_limited.iloc[position]["bin_number"]
 
 
