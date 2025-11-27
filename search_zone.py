@@ -89,48 +89,57 @@ def get_devan_height(input_record, criteria_id, df_empty_bins, search_times) -> 
     pallet_val = str(input_record.get("Palllet#"))
     preferred_bin = input_record['Preferred Bin']
     matched_row = df_empty_bins[df_empty_bins['bin_number'] == preferred_bin]
-    bin_type = matched_row['Type'].values[0]
+    preferred_bin_type = matched_row['Type'].values[0]
 
-    cond_pick = df_empty_bins["Pick/Reserve"].astype(str).str.strip() != "P"    # Exclude Pick bins
+    # filtered_df = df_empty_bins[
+    #     df_empty_bins["bin_number"].str.startswith(criteria_id.location, na=False) &
+    #     df_empty_bins["bin_number"].str.contains(f"-{criteria_id.zone}-", na=False) &
+    #     (df_empty_bins["empty_flag"] == 1) & (df_empty_bins["Pick/Reserve"] == "R")
+    # ].copy()
+
     cond_empty = df_empty_bins["empty_flag"] == 1
     cond_location = df_empty_bins["bin_number"].str.startswith(criteria_id.location, na=False)
     cond_zone = df_empty_bins["bin_number"].str.contains(f"-{criteria_id.zone}-", na=False)
+    df_empty_bins["Pick/Reserve"] = (
+        df_empty_bins["Pick/Reserve"]
+        .astype(str)
+        .str.strip()
+        .str.upper()
+    )
+    cond_bin_type = df_empty_bins["Pick/Reserve"] == "R"
 
-    print(f"criteria_id:{criteria_id.bin_number}")
-    print(f"bin_type:{bin_type}")
-
-    if bin_type in ["A", "C"]:
+    if preferred_bin_type in ["A", "C"]:
         filtered_df = df_empty_bins[
+            cond_empty &
             cond_location &
             cond_zone &
-            cond_empty &
-            # cond_pick &
+            cond_bin_type &
             (df_empty_bins["Type"] == "A")
             ].copy()
 
-    elif bin_type == "B":
+    elif preferred_bin_type in ["B"]:
         max_height = config.MAX_HEIGHT
         cond_b_candidates = (
-                (df_empty_bins["empty_flag"] == 1) &
-                (df_empty_bins["criteria_id"] == 0) &
+                cond_location &
+                cond_empty  &
+                cond_bin_type &
                 df_empty_bins["Type"].isin(["B"])
-                # cond_pick
         )
-
+        # print(f"cond_b_candidates.sum():{cond_b_candidates.sum()}")
         if cond_b_candidates.sum() >= 1:
             filtered_df = df_empty_bins[
+                cond_empty &
                 cond_location &
                 cond_zone &
-                cond_empty &
-                # cond_pick &
+                cond_bin_type &
                 df_empty_bins["Type"].isin(["B"])
                 ].copy()
         else:
             filtered_df = df_empty_bins[
+                cond_empty &
                 cond_location &
                 cond_zone &
-                cond_empty &
-                # cond_pick &
+                cond_bin_type &
                 df_empty_bins["Type"].isin(["A"])
                 ].copy()
 
@@ -140,14 +149,77 @@ def get_devan_height(input_record, criteria_id, df_empty_bins, search_times) -> 
         .astype(int)
     )
 
-    print(f"filtered_df(before check):\n{filtered_df}")
-    exit(0)
-
+    # print(f"preferred_bin:{preferred_bin} - preferred_bin_type : {preferred_bin_type} \n"
+    #       f"filtered_df:{filtered_df["bin_number"].tolist()} - reserve_bin_type : {filtered_df["Type"].tolist()}")
+    # df_empty_bins.to_csv("df_empty_bins_debug.csv", index=False)
     if len(filtered_df) == 0:
-        print("⚠ No bins found after filtering.")
+        # print("⚠ No bins found after filtering.")
         return filtered_df
+    # else:
+    #     exit(0)
 
-    print(f"filtered_df:\n{filtered_df}")
+    #
+    # pallet_val = str(input_record.get("Palllet#"))
+    # preferred_bin = input_record['Preferred Bin']
+    # matched_row = df_empty_bins[df_empty_bins['bin_number'] == preferred_bin]
+    # bin_type = matched_row['Type'].values[0]
+    #
+    # cond_pick = df_empty_bins["Pick/Reserve"].astype(str).str.strip() != "P"    # Exclude Pick bins
+    # cond_empty = df_empty_bins["empty_flag"] == 1
+    # cond_location = df_empty_bins["bin_number"].str.startswith(criteria_id.location, na=False)
+    # cond_zone = df_empty_bins["bin_number"].str.contains(f"-{criteria_id.zone}-", na=False)
+    #
+    # print(f"criteria_id:{criteria_id.bin_number}")
+    # print(f"bin_type:{bin_type}")
+    #
+    # if bin_type in ["A", "C"]:
+    #     filtered_df = df_empty_bins[
+    #         cond_location &
+    #         cond_zone &
+    #         cond_empty &
+    #         # cond_pick &
+    #         (df_empty_bins["Type"] == "A")
+    #         ].copy()
+    #
+    # elif bin_type == "B":
+    #     max_height = config.MAX_HEIGHT
+    #     cond_b_candidates = (
+    #             (df_empty_bins["empty_flag"] == 1) &
+    #             (df_empty_bins["criteria_id"] == 0) &
+    #             df_empty_bins["Type"].isin(["B"])
+    #             # cond_pick
+    #     )
+    #
+    #     if cond_b_candidates.sum() >= 1:
+    #         filtered_df = df_empty_bins[
+    #             cond_location &
+    #             cond_zone &
+    #             cond_empty &
+    #             # cond_pick &
+    #             df_empty_bins["Type"].isin(["B"])
+    #             ].copy()
+    #     else:
+    #         filtered_df = df_empty_bins[
+    #             cond_location &
+    #             cond_zone &
+    #             cond_empty &
+    #             # cond_pick &
+    #             df_empty_bins["Type"].isin(["A"])
+    #             ].copy()
+    #
+    # filtered_df["devan_height"] = (
+    #     filtered_df["bin_number"]
+    #     .str.extract(r"-(\d+)$")
+    #     .astype(int)
+    # )
+
+
+
+    # if len(filtered_df) == 0:
+    #     print("⚠ No bins found after filtering.")
+    #     return filtered_df
+
+
 
     df_equal = filtered_df[filtered_df["devan_height"] == int(criteria_id.devan_height)]
     df_smaller = filtered_df[filtered_df["devan_height"] < int(criteria_id.devan_height)].sort_values(
@@ -159,9 +231,10 @@ def get_devan_height(input_record, criteria_id, df_empty_bins, search_times) -> 
 
     df_devan_height = pd.concat([df_equal, df_smaller, df_larger], ignore_index=True)
     df_devan_height["devan_height"] = df_devan_height["bin_number"].str.extract(r"-(\d+)$").astype(int)
+    print(f"df_devan_height:\n{df_devan_height}")
 
     # Reset the max_height based on ZoneType
-    if bin_type in ["A", "C"] and len(df_devan_height) >= 1:
+    if preferred_bin_type in ["A", "C"] and len(df_devan_height) >= 1:
         zone_type = df_devan_height.iloc[0]['ZoneType']
         if zone_type == "AC1":
             max_height = config.MAX_HEIGHT_HEAVY_AC1

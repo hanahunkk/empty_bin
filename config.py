@@ -6,6 +6,7 @@ REF_LIST = []
 
 # class_empty_bin.py
 BASE_INPUT_FILE = "bins.csv"
+EMPTYBIN_FILE="EmptyBin.csv"
 BASE_INPUT_FILE_FLAG = 0    # 0 : bins.csv
                             # 1 : others
 INPUT_FILE_NAME = ""

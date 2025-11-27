@@ -96,8 +96,8 @@ def run_process():
     unique_bins = sorted(set(all_bins))
 
     # Load Empty Bin file
-
-    df_empty_bins = EmptyBin.empty_bins(bin_file_name, unique_bins)
+    # bin_file_name : EmtpyBin.csv
+    df_empty_bins = EmptyBin.empty_bins(bin_file_name)
 
     # Check duplicate of PO files
     # result_string = check_run(df_empty_bins, po_files_names)

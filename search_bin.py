@@ -101,8 +101,7 @@ class LocationBase:
 # =========================================================
 class LocationA10(LocationBase):
     def get_priority_order(self):
-        return ["A10", "A20", "A30"]
-
+        return "type1", ["A10", "A20", "A30"]
 
 class LocationA20(LocationBase):
     def get_priority_order(self):
@@ -110,13 +109,13 @@ class LocationA20(LocationBase):
         max_zone = self.max_zone_num.get(self.bin.zone_alpha, 0)
         half_zone = round(max_zone / 2)
         if self.bin.zone_num <= half_zone:
-            return ["A20", "A10", "A30"]
+            return "type2", ["A20", "A10", "A30"]
         else:
-            return ["A20", "A30", "A10"]
+            return "type2", ["A20", "A30", "A10"]
 
 class LocationA30(LocationBase):
     def get_priority_order(self):
-        return ["A30", "A20", "A10"]
+        return "type3", ["A30", "A20", "A10"]
 
 
 class LocationA40(LocationBase):
@@ -171,15 +170,36 @@ def search_bin(input_record, df_empty_bins, search_times) -> None:
     bin = BinID(input_bin)
 
     handler = get_location_handler(bin)
-    location_order = handler.get_priority_order()
-    print(f"location_order: {location_order}")
+    location_type, location_order = handler.get_priority_order()
+    print(f"input_bin : {input_bin}, bin : {bin} , location_type : {location_type} , location_order: {location_order}")
 
     total_count = 0
+    check_flag = 0
     # found = False
     for loc in location_order:
         func = globals().get(f"location_{loc}")
+
         if not func:
             continue
+
+        if check_flag == 1:
+            if location_type == "type1":
+                start_num = config.LOCATION_CONFIG[loc]["START_ZONE_NUM"]
+            elif location_type == "type2":
+                if loc == "A10":
+                    start_num = config.LOCATION_CONFIG[loc]["MAX_ZONE_NUM"]
+                else:  # loc == "A30"
+                    start_num = config.LOCATION_CONFIG[loc]["START_ZONE_NUM"]
+            else:  # type3
+                start_num = config.LOCATION_CONFIG[loc]["MAX_ZONE_NUM"]
+
+            next_location_bin = \
+                (f"{loc}-"
+                 f"{bin.zone_alpha}{start_num:02d}-"
+                 f"01")
+            bin = BinID(next_location_bin)
+            print(f"next_location_bin {bin} ")
+
 
         count_empty = func(input_record, bin, df_empty_bins, search_times)
         total_count += count_empty
@@ -188,6 +208,7 @@ def search_bin(input_record, df_empty_bins, search_times) -> None:
             break
         else:
             print(f"⚠️ Weight Not enough loc({loc}) {total_count}")
+            check_flag = 1
             continue
 
 

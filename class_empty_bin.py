@@ -6,14 +6,27 @@ import pandas as pd
 
 class EmptyBin:
 
-    def __init__(self, input_path=config.EMPTYBIN_DIR):
+    def __init__(self, input_file, input_path=config.EMPTYBIN_DIR, ):
         self.folder_path = input_path
         self.df = None
-        self.csv_path = self.find_result_file()
+        self.csv_path = self.csv_path(input_file)
 
         print(f"csv_path: {self.csv_path}")
 
-    def find_result_file(self) -> str:
+    def csv_path(self, input_file) -> str:
+        if input_file == "bins.csv":
+            self.csv_path = self.path_bins_csv()
+        else:
+            self.csv_path = self.path_result_csv()
+
+        return self.csv_path
+
+
+    def path_bins_csv(self) -> str:
+        return os.path.join(config.EMPTYBIN_DIR, config.BASE_INPUT_FILE)
+
+
+    def path_result_csv(self) -> str:
         latest_num = -1
         latest_file = None
 
@@ -23,7 +36,7 @@ class EmptyBin:
                     num_part = file.replace("empty_bins_result", "").replace(".csv", "")
 
                     if num_part.isdigit():
-                        print(f"num_part: {num_part}")
+                        # print(f"num_part: {num_part}")
                         num_val = int(num_part)
                         if num_val > latest_num:
                             latest_num = num_val
@@ -32,21 +45,23 @@ class EmptyBin:
             if latest_file:
                 # Using the result file
                 print(f"✅ Found latest result file: {latest_file}")
-                return os.path.join(self.folder_path, latest_file)
+                # return os.path.join(self.folder_path, latest_file)
+                return os.path.join(config.EMPTYBIN_DIR, latest_file)
+            else:
+                # Using the original bins.csv file
+                print(f"⚠️ No result file found. Using base file: {os.path.join(config.EMPTYBIN_DIR, latest_file)}")
 
         except Exception as e:
             print(f"❌ Folder Search Error: {e}")
 
-        fallback = os.path.join(self.folder_path, config.BASE_INPUT_FILE)
-        return fallback # Using the default file(bins.csv)
 
-
-    def load(self) -> bool:
-        if not os.path.exists(self.csv_path):
-            print(f"❌ File not found: {self.csv_path}")
-            return False
+    def load(self, input_csv) -> bool:
+        # if not os.path.exists(self.csv_path):
+        #     print(f"❌ File not found: {self.csv_path}")
+        #     return False
         try:
-            if "bins.csv" in self.csv_path.lower():
+            if input_csv == "bins.csv":
+            # if "bins.csv" in self.csv_path.lower():
                 config.BASE_INPUT_FILE_FLAG = 0 # bins.csv
             else:
                 config.BASE_INPUT_FILE_FLAG = 1
@@ -64,12 +79,14 @@ class EmptyBin:
                 "Target Bin2", "Target Bin3", "PO name", "Pick/Reserve", "Type","ZoneType"
             ]
 
-            self.df["empty_flag"] = self.df["empty_flag"].fillna(0).astype(int)
+            self.df["No"] = self.df["No"].fillna(0).astype("Int64")
+            self.df["empty_flag"] = self.df["empty_flag"].fillna(0).astype("Int64")
+            self.df["criteria_id"] = self.df["criteria_id"].fillna(0).astype("Int64")
             self.df["Palllet#"] = self.df["Palllet#"].fillna("").astype(str)
             self.df["Tfc Code"] = self.df["Tfc Code"].fillna("").astype(str)
             self.df["Preferred Bin"] = self.df["Preferred Bin"].fillna("").astype(str)
             self.df["Memo"] = self.df["Memo"].fillna("").astype(str)
-            self.df["Qt"] = self.df["Qt"].fillna(0).astype(int)
+            self.df["Qt"] = self.df["Qt"].fillna(0).astype("Int64")
             self.df["Target Bin1"] = self.df["Target Bin1"].fillna("").astype(str)
             self.df["Target Bin2"] = self.df["Target Bin2"].fillna("").astype(str)
             self.df["Target Bin3"] = self.df["Target Bin3"].fillna("").astype(str)
@@ -121,112 +138,128 @@ class EmptyBin:
 
 
     @classmethod
-    def empty_bins(cls, input_file, unique_bins) -> pd.DataFrame:
+    # def empty_bins(cls, input_file, unique_bins) -> pd.DataFrame:
+    def empty_bins(cls, input_file) -> pd.DataFrame:
 
-        all_empty_bins = cls()
-        ok = all_empty_bins.load()  # Load the base bins.csv file
+        all_empty_bins = cls("bins.csv")
+        ok = all_empty_bins.load("bins.csv")  # Load the base bins.csv file
         if not ok or all_empty_bins.df is None:
             raise RuntimeError(f"❌ Failed to load base CSV: {all_empty_bins.csv_path}")
         df_all_empty_bins = all_empty_bins.df
-        print(f"✅ Base CSV loaded: {len(df_all_empty_bins)} rows")
+        print(f"all_empty_bins: {all_empty_bins}")
 
-        if config.BASE_INPUT_FILE_FLAG == 1 or config.BASE_INPUT_FILE_FLAG == 0:
-            # Get the Empty file
-            df_empty_bins = pd.read_csv(input_file, encoding="utf-8-sig")
-            print(f"✅ Input file loaded: {len(df_empty_bins)} rows")
-
-            # Update criteria_id for bins in unique_bins
-
-            # mask = df_all_empty_bins["criteria_id"] == 0
-            # df_all_empty_bins.loc[mask, "criteria_id"] = df_all_empty_bins.loc[mask, "bin_number"].apply(
-            #     lambda x: 1 if x in unique_bins else 0
-            # )
-
-            empty_bin_numbers = df_empty_bins['Bin Number'].unique()
-            # df_all_empty_bins['empty_flag'] = df_all_empty_bins['bin_number'].apply(
-            #     lambda x: 1 if x in empty_bin_numbers else 0
-            # )
-
-            # df_all_empty_bins['empty_flag'] = df_all_empty_bins.apply(
-            #     lambda row: 1 if (
-            #             row['bin_number'] in empty_bin_numbers and
-            #             str(row['Pick/Reserve']).strip().upper() == "P"
-            #     ) else 0,
-            #     axis=1
-            # )
-            #
-            # df_all_empty_bins['empty_flag'] = df_all_empty_bins.apply(
-            #     lambda row: 1 if (
-            #             row['bin_number'] in empty_bin_numbers and
-            #             (pd.isna(row['PO name']) or str(row['PO name']).strip() == "")
-            #     ) else row['empty_flag'],
-            #     axis=1
-            # )
-            #
-            # df_empty_bins = df_all_empty_bins[
-            #     (
-            #             (df_all_empty_bins["empty_flag"] == 1) |
-            #             (df_all_empty_bins["Pick/Reserve"] == "P")
-            #     )
-            #     # &
-            #     # (
-            #     #         df_all_empty_bins["PO name"].isna() |
-            #     #         (df_all_empty_bins["PO name"].astype(str).str.strip() == "")
-            #     # )
-            #     ].copy()
-
-            po_not_empty = ~(
-                    df_all_empty_bins['PO name'].isna() |
-                    (df_all_empty_bins['PO name'].astype(str).str.strip() == "")
+        input_file = os.path.join(config.EMPTYBIN_DIR, config.EMPTYBIN_FILE)
+        df_empty_bins = pd.read_csv(input_file, encoding="utf-8-sig")
+        empty_bin_numbers = df_empty_bins['Bin Number'].unique()
+        df_empty_bins = df_all_empty_bins[
+            (
+                    df_all_empty_bins['bin_number'].isin(empty_bin_numbers) |
+                    (df_all_empty_bins['Pick/Reserve'].astype(str).str.strip() == "P")
             )
+        ].copy()
+        df_empty_bins = df_empty_bins.reset_index(drop=True)
+        df_empty_bins["No"] = (df_empty_bins.index + 1).astype("Int64")
+        df_empty_bins.to_csv("TEMP_empty_bins.csv", index=False)
+        print(f"empty_bin_numbers: {len(df_empty_bins)}")
 
-            # 2) PO name 이 비어 있지 않은 행은 empty_flag = 0
-            # df_all_empty_bins.loc[po_not_empty, 'empty_flag'] = 0
-            df_all_empty_bins.loc[
-                po_not_empty & (df_all_empty_bins['empty_flag'] != 2),
-                'empty_flag'
-            ] = 0
+        result_empty_bins = cls("result.csv")
+        ok = result_empty_bins.load("result.csv")
+        if not ok or result_empty_bins.df is None:
+            return df_empty_bins
 
-            df_empty_bins = df_all_empty_bins[
-                (
-                        df_all_empty_bins['bin_number'].isin(empty_bin_numbers) |
-                        (df_all_empty_bins['Pick/Reserve'].astype(str).str.strip() == "P")
-                )
-                # &
-                # (
-                #         df_all_empty_bins['PO name'].isna() |
-                #         (df_all_empty_bins['PO name'].astype(str).str.strip() == "")
-                # )
-                ].copy()
+        df_result_empty_bins = result_empty_bins.df
+        print(f"result_empty_bins: {df_result_empty_bins}")
 
-            df_empty_bins = df_empty_bins.reset_index(drop=True)
-            df_empty_bins["No"] = df_empty_bins.index + 1
+        po_not_empty = ~(
+                df_result_empty_bins['PO name'].isna() |
+                (df_result_empty_bins['PO name'].astype(str).str.strip() == "")
+        )
 
-            # df_empty_bins.to_csv("TEMP1.csv")
-            # exit(0)
+        df_po_rows = df_result_empty_bins[po_not_empty].copy()
 
-        else:
-            # unique_po_names = df_all_empty_bins["PO name"].dropna().unique()
+        df_merged = df_empty_bins.merge(
+            df_po_rows,
+            on='bin_number',
+            how='left',
+            suffixes=('', '_new')
+        )
 
-            unique_po_names = (
-                df_all_empty_bins["PO name"]
-                .dropna()  # NaN 제거
-                .astype(str)
-                .str.strip()  # 앞뒤 공백 제거
-            )
-            unique_po_names = unique_po_names[unique_po_names != ""]
-            unique_po_names = unique_po_names.unique().tolist()
+        for col in df_empty_bins.columns:
+            if col != 'bin_number':
+                new_col = col + '_new'
+                if new_col in df_merged.columns:
+                    df_merged[col] = df_merged[new_col].combine_first(df_merged[col])
+                    df_merged.drop(columns=[new_col], inplace=True)
 
-            show_po_checkboxes(os.path.basename(config.INPUT_FILE_NAME),
-                               unique_po_names,
-                               df_all_empty_bins)
-            print(f"unique_po_names:{unique_po_names}")
-            if os.path.exists("TEMP.csv"):
-                os.remove("TEMP.csv")
-            df_all_empty_bins.to_csv("TEMP.csv")
-            # df_empty_bins = df_all_empty_bins
+        df_empty_bins = df_merged
+        # df_empty_bins.to_csv("TEMP2_empty_bins.csv", index=False)
 
-            exit(0)
+        # exit(0)
+        #
+        # df_all_empty_bins = all_empty_bins.df
+        # print(f"✅ Base CSV loaded: {len(df_all_empty_bins)} rows")
+        #
+        #
+        #
+        # if config.BASE_INPUT_FILE_FLAG == 1 or config.BASE_INPUT_FILE_FLAG == 0:
+        #     # Get the Empty file
+        #     df_empty_bins = pd.read_csv(input_file, encoding="utf-8-sig")
+        #     print(f"✅ Input file loaded: {len(df_empty_bins)} rows")
+        #
+        #     empty_bin_numbers = df_empty_bins['Bin Number'].unique()
+        #
+        #     po_not_empty = ~(
+        #             df_all_empty_bins['PO name'].isna() |
+        #             (df_all_empty_bins['PO name'].astype(str).str.strip() == "")
+        #     )
+        #
+        #     # 2) PO name 이 비어 있지 않은 행은 empty_flag = 0
+        #     # df_all_empty_bins.loc[po_not_empty, 'empty_flag'] = 0
+        #     df_all_empty_bins.loc[
+        #         po_not_empty & (df_all_empty_bins['empty_flag'] != 2),
+        #         'empty_flag'
+        #     ] = 0
+        #
+        #     df_empty_bins = df_all_empty_bins[
+        #         (
+        #                 df_all_empty_bins['bin_number'].isin(empty_bin_numbers) |
+        #                 (df_all_empty_bins['Pick/Reserve'].astype(str).str.strip() == "P")
+        #         )
+        #         # &
+        #         # (
+        #         #         df_all_empty_bins['PO name'].isna() |
+        #         #         (df_all_empty_bins['PO name'].astype(str).str.strip() == "")
+        #         # )
+        #         ].copy()
+        #
+        #     df_empty_bins = df_empty_bins.reset_index(drop=True)
+        #     df_empty_bins["No"] = df_empty_bins.index + 1
+        #
+        #     # df_empty_bins.to_csv("TEMP1.csv")
+        #     # exit(0)
+        #
+        # else:
+        #     # unique_po_names = df_all_empty_bins["PO name"].dropna().unique()
+        #
+        #     unique_po_names = (
+        #         df_all_empty_bins["PO name"]
+        #         .dropna()  # NaN 제거
+        #         .astype(str)
+        #         .str.strip()  # 앞뒤 공백 제거
+        #     )
+        #     unique_po_names = unique_po_names[unique_po_names != ""]
+        #     unique_po_names = unique_po_names.unique().tolist()
+        #
+        #     show_po_checkboxes(os.path.basename(config.INPUT_FILE_NAME),
+        #                        unique_po_names,
+        #                        df_all_empty_bins)
+        #     print(f"unique_po_names:{unique_po_names}")
+        #     if os.path.exists("TEMP.csv"):
+        #         os.remove("TEMP.csv")
+        #     df_all_empty_bins.to_csv("TEMP.csv")
+        #     # df_empty_bins = df_all_empty_bins
+        #
+        #     exit(0)
 
         return df_empty_bins
 
