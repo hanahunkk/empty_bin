@@ -10,7 +10,7 @@ columns_to_export = [
 ]
 
 
-def save_file(input_df):
+def save_file(input_df, po_files_names: list[str]):
 
     thin_border = Border(
         left=Side(style="thin", color="000000"),
@@ -22,8 +22,13 @@ def save_file(input_df):
     font_normal = Font(name="Arial", size=12)
     font_bold = Font(name="Arial", size=12, bold=True)
 
+    po_files = [os.path.basename(p) for p in po_files_names]
+
     for po_name, df_group in input_df.groupby("PO name"):
         if pd.isna(po_name) or str(po_name).strip() == "":
+            continue
+
+        if po_name not in po_files:
             continue
 
         # print(f"Processing: {po_name}")
@@ -85,28 +90,39 @@ def save_file(input_df):
 
         wb = load_workbook(output_path)
         ws = wb.active
+
+        ws.insert_rows(1)
+        ws.merge_cells("A1:H1")
+        ws["A1"] = po_name
+        ws["A1"].font = font_bold
+
         ws.title = extracted
 
         # Header fill
         header_fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")
-        for cell in ws[1]:
+        for cell in ws[2]:
             cell.fill = header_fill
             cell.font = font_bold
             cell.border = thin_border
 
         # Cell line
-        for row in ws.iter_rows(min_row=2):
+        for row in ws.iter_rows(min_row=3):
             for cell in row:
                 cell.font = font_normal
                 cell.border = thin_border
 
         # Auto column width
-        for column_cells in ws.columns:
+        # for column_cells in ws.columns:
+        #     max_length = 0
+        #     column = column_cells[0].column_letter
+        #     column_header = column_cells[0].value
+        #
+        #     for cell in column_cells:
+        for col in ws.iter_cols(min_row=2):  # 🔥 2행부터 시작
             max_length = 0
-            column = column_cells[0].column_letter
-            column_header = column_cells[0].value
+            column_letter = col[0].column_letter  # 이제 정상 Cell
 
-            for cell in column_cells:
+            for cell in col:
                 try:
                     if cell.value:
                         length = len(str(cell.value))
@@ -114,16 +130,26 @@ def save_file(input_df):
                             max_length = length
                 except:
                     pass
+
             adjusted_width = max_length + 2
 
-            if column_header in ["Palllet#", "memo", "preferred bin",
-                                 "Target Bin1", "Target Bin2"  ]:
+            if col[0].value in ["Palllet#", "memo", "preferred bin", "Target Bin1", "Target Bin2"]:
                 adjusted_width = 20
 
-            ws.column_dimensions[column].width = adjusted_width
+            ws.column_dimensions[column_letter].width = adjusted_width
 
 
         wb.save(output_path)
         wb.close()
 
         print(f"✅ Saved: {output_path}")
+
+
+import os
+import re
+
+def extract_po_name(filepath):
+    filename = os.path.basename(filepath)
+    match = re.search(r'(PO\d{5}[A-Za-z0-9]+)', filename)
+    return match.group(1) if match else None
+

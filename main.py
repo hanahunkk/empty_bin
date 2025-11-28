@@ -156,7 +156,7 @@ def run_process():
     # log_print(f"  ✅ Saved new file: {output_path_name}")
     print(f"✅ Saved new file: {output_path_name}")
 
-    save_file(df_empty_bins)
+    save_file(df_empty_bins, po_files_names)
 
     # timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     # print("++++++++++++++++++++++++++++++++++++++++++")

@@ -161,7 +161,7 @@ class EmptyBin:
         ].copy()
         df_empty_bins = df_empty_bins.reset_index(drop=True)
         df_empty_bins["No"] = (df_empty_bins.index + 1).astype("Int64")
-        df_empty_bins.to_csv("TEMP_empty_bins.csv", index=False)
+        # df_empty_bins.to_csv("TEMP_empty_bins.csv", index=False)
         print(f"2. df_empty_bins: {len(df_empty_bins)}")
 
         # 3) Load the result.csv file
