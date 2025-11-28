@@ -1,4 +1,4 @@
-import os, re
+import os, re, sys
 import tkinter as tk
 from tkinter import font
 from tkinter import filedialog, messagebox
@@ -8,26 +8,37 @@ from save_po_files import save_file
 from class_po_file import POFile
 from class_stocklist import StockList
 import config
+from datetime import datetime
 
 
+log_buffer = []
+def log_print(msg):
+    # print(msg)  # Console output
+    log_buffer.append(msg)
 
 selected_po_paths = []   # PO files
 selected_bin_path = ""   # bin file
 
 
-def select_empty_bin():
-
+def check_bins_csv()->bool:
     global selected_bin_path
-
-    fixed_path = os.path.join(config.EMPTYBIN_DIR, "EmptyBin.csv")
-
+    fixed_path = os.path.join(config.EMPTYBIN_DIR, "bins.csv")
     if os.path.exists(fixed_path):
-        selected_bin_path = fixed_path
-        # entry_bin.delete(0, tk.END)
-        # entry_bin.insert(0, os.path.basename(fixed_path))
+        return True
     else:
         messagebox.showerror("Error", f"File not found:\n{fixed_path}")
+        return False
 
+
+def check_empty_bin_csv()->bool:
+    global selected_bin_path
+    fixed_path = os.path.join(config.EMPTYBIN_DIR, "EmptyBin.csv")
+    if os.path.exists(fixed_path):
+        selected_bin_path = fixed_path
+        return True
+    else:
+        messagebox.showerror("Error", f"File not found:\n{fixed_path}")
+        return False
 
 
 def select_po_files():
@@ -66,7 +77,20 @@ def select_po_files():
 
 
 def run_process():
-    select_empty_bin()
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # log_print("++++++++++++++++++++++++++++++++++++++++++")
+    # log_print(f"🟢 Process started at {timestamp}")
+    # log_print("++++++++++++++++++++++++++++++++++++++++++")
+
+    print("++++++++++++++++++++++++++++++++++++++++++")
+    print(f"🟢 Process started at {timestamp}")
+    print("++++++++++++++++++++++++++++++++++++++++++")
+
+
+    check1 = check_bins_csv()
+    check2 = check_empty_bin_csv()
+    if not (check1 and check2):
+        sys.exit(1)
 
     # if not selected_po_paths or not selected_bin_path:
     if not selected_po_paths:
@@ -79,7 +103,8 @@ def run_process():
     po_files_names = selected_po_paths
     bin_file_name = selected_bin_path
 
-
+    # log_print(f"  Selected PO Files: {po_files_names}")
+    # log_print(f"  Selected Empty Bin File: {bin_file_name}")
     print(f"Selected PO Files: {po_files_names}")
     print(f"Selected Empty Bin File: {bin_file_name}")
 
@@ -100,10 +125,10 @@ def run_process():
     df_empty_bins = EmptyBin.empty_bins(bin_file_name)
 
     # Check duplicate of PO files
-    # result_string = check_run(df_empty_bins, po_files_names)
-    # if result_string:
-    #     messagebox.showinfo("PO Match", result_string)
-    #     return
+    result_string = check_run(df_empty_bins, po_files_names)
+    if result_string:
+        messagebox.showinfo("PO Match", result_string)
+        return
 
     # Load Stock List
     df_stock_list = StockList.item_standard()
@@ -115,27 +140,43 @@ def run_process():
 
     rtn_process = process_bins(df_dict_po_files, df_empty_bins, df_stock_list_heavy)
 
-    from datetime import datetime
+    # from datetime import datetime
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     # timestamp = datetime.now().strftime("%Y%m%d")
-    output_path = config.EMPTYBIN_DIR
+    output_path = config.EMPTYBIN_RESULT_DIR
     output_name = f"empty_bins_result{timestamp}.csv"
     output_path_name = os.path.join(output_path, output_name)
 
     if os.path.exists(output_path_name):
         os.remove(output_path_name)
+        # log_print(f"  🗑️ Deleted existing file: {output_path_name}")
         print(f"🗑️ Deleted existing file: {output_path_name}")
 
     df_empty_bins.to_csv(output_path_name, index=False)
+    # log_print(f"  ✅ Saved new file: {output_path_name}")
     print(f"✅ Saved new file: {output_path_name}")
 
     save_file(df_empty_bins)
 
-    exit(0)
+    # timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # print("++++++++++++++++++++++++++++++++++++++++++")
+    # print(f"🟢 Process ended   at {timestamp}")
+    # print("++++++++++++++++++++++++++++++++++++++++++")
+    # with open("log_output.txt", "w", encoding="utf-8") as f:
+    #     f.write("\n".join(log_buffer))
 
+
+    # exit(0)
+#
 def close_app():
     result = messagebox.askyesno("Exit", "Are you sure you want to exit?")
     if result:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print("++++++++++++++++++++++++++++++++++++++++++")
+        print(f"🟢 Process ended   at {timestamp}")
+        print("++++++++++++++++++++++++++++++++++++++++++")
+        # with open("log_output.txt", "w", encoding="utf-8") as f:
+        #     f.write("\n".join(log_buffer))
         root.destroy()
 
 
@@ -194,8 +235,6 @@ scroll.grid(row=2, column=2, sticky="ns", pady=10)
 tk.Button(root, text="🔍 Find", command=select_po_files).grid(row=2, column=3, padx=5, pady=10, sticky="n")
 
 
-
-
 # -------------------------------
 # ▶ Run & ❌ Exit Buttons
 # -------------------------------
@@ -238,8 +277,5 @@ tk.Button(
     font=("Arial", 12, "bold"),
     command=close_app
 ).pack(side="right", padx=30)
-
-
-
 
 root.mainloop()

@@ -231,7 +231,7 @@ def get_devan_height(input_record, criteria_id, df_empty_bins, search_times) -> 
 
     df_devan_height = pd.concat([df_equal, df_smaller, df_larger], ignore_index=True)
     df_devan_height["devan_height"] = df_devan_height["bin_number"].str.extract(r"-(\d+)$").astype(int)
-    print(f"df_devan_height:\n{df_devan_height}")
+    # print(f"df_devan_height:\n{df_devan_height}")
 
     # Reset the max_height based on ZoneType
     if preferred_bin_type in ["A", "C"] and len(df_devan_height) >= 1:
@@ -247,8 +247,9 @@ def get_devan_height(input_record, criteria_id, df_empty_bins, search_times) -> 
     position = 0
 
     if len(df_limited) >= 1:
-        print(f"max_height:{max_height}")
+        print(f"    max_height:{max_height}")
         print(f"df_limited:\n{df_limited}")
+        # print(f"df_limited:\n    {df_limited}")
         target_bin = df_limited.iloc[position]["bin_number"]
 
 

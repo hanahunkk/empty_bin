@@ -171,7 +171,7 @@ def search_bin(input_record, df_empty_bins, search_times) -> None:
 
     handler = get_location_handler(bin)
     location_type, location_order = handler.get_priority_order()
-    print(f"input_bin : {input_bin}, bin : {bin} , location_type : {location_type} , location_order: {location_order}")
+    print(f"input_bin : {input_bin}, location_type:{location_type}, location_order:{location_order}")
 
     total_count = 0
     check_flag = 0

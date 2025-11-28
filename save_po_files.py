@@ -19,29 +19,21 @@ def save_file(input_df):
         bottom=Side(style="thin", color="000000")
     )
 
-    font_normal = Font(name="Arial", size=12)  # 일반 셀
-    font_bold = Font(name="Arial", size=12, bold=True)  # 헤더(굵게)
+    font_normal = Font(name="Arial", size=12)
+    font_bold = Font(name="Arial", size=12, bold=True)
 
     for po_name, df_group in input_df.groupby("PO name"):
         if pd.isna(po_name) or str(po_name).strip() == "":
             continue
 
-        print(f"Processing: {po_name}")
-        print(df_group)
-        # df_group["ref_flag"] = df_group["Palllet#"].str.contains("ref", case=False, na=False)
-        # df_group = df_group.sort_values(
-        #     by=["Tfc Code", "ref_flag", "Palllet#"],
-        #     ascending=[True, True, True]
-        # ).reset_index(drop=True)
-        # #
-        # df_group = df_group.sort_values(by="Palllet#", ascending=True).reset_index(drop=True)
-        print(f"df_group before sort:\n{df_group}")
+        # print(f"Processing: {po_name}")
+        # print(df_group)
+        # print(f"df_group before sort:\n{df_group}")
 
-        first_value = df_group["PO name"].iloc[0]  # 첫 번째 행의 값
-        print(f"PO name: {po_name} → 첫 번째 PO file: {first_value}")
+        first_value = df_group["PO name"].iloc[0]
 
         df_group = df_group.sort_values(
-            by=[ "Palllet#", "Preferred Bin"],
+            by=[ "Preferred Bin", "Palllet#" ],
             ascending=[True, True]
         ).reset_index(drop=True)
         merged_rows = []
@@ -59,7 +51,7 @@ def save_file(input_df):
 
         df_merged = pd.DataFrame(merged_rows)
         df_merged = df_merged.sort_values(
-            by=["Palllet#", "Preferred Bin"],
+            by=["Preferred Bin", "Palllet#" ],
             ascending=[True, True]
         ).reset_index(drop=True)
 
@@ -67,24 +59,24 @@ def save_file(input_df):
             df_merged.insert(0, "No", range(1, len(df_merged) + 1))
         else:
             df_merged["No"] = range(1, len(df_merged) + 1)
-        print(f"po_name sheet name1: {po_name}")
+        # print(f"po_name sheet name1: {po_name}")
         safe_name = re.sub(r'[\\/:\*\?"<>\|\-]', "_", po_name)
         safe_name = os.path.splitext(safe_name)[0]
-        print(f"safe_name sheet name1: {safe_name}")
+        # print(f"safe_name sheet name1: {safe_name}")
 
         match = re.search(r"PO\d{5}([^_]+)", safe_name)
         if match:
             extracted = match.group(1)  # ✅ MM01AAD25
         else:
             extracted = po_name
-        print(f"Extracted sheet name1: {extracted}")
+        # print(f"Extracted sheet name1: {extracted}")
         extracted = re.sub(r'[\\/\:\*\?\[\]]', "_", extracted)
         extracted = extracted.strip()
         if len(extracted) > 31:
             extracted = extracted[:31]
-        print(f"Extracted sheet name2: {extracted}")
+        # print(f"Extracted sheet name2: {extracted}")
 
-        output_path = os.path.join(f"{safe_name}_kakuno")
+        output_path = os.path.join(f"{safe_name}_auto")
 
         if not output_path.lower().endswith(".xlsx"):
             output_path += ".xlsx"
@@ -126,7 +118,7 @@ def save_file(input_df):
 
             if column_header in ["Palllet#", "memo", "preferred bin",
                                  "Target Bin1", "Target Bin2"  ]:
-                adjusted_width = 20  # 🔹 Memo 열은 20칸 더 넓게
+                adjusted_width = 20
 
             ws.column_dimensions[column].width = adjusted_width
 

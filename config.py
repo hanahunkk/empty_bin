@@ -1,5 +1,6 @@
 # main.py / class_empty_bin.py
 EMPTYBIN_DIR = r"\\Tfc-akl-share\tfc共有\物流部\物流部\EmptyBin"
+EMPTYBIN_RESULT_DIR = r"\\Tfc-akl-share\tfc共有\物流部\物流部\EmptyBin\result"
 
 # process_file.py / search_zone
 REF_LIST = []
